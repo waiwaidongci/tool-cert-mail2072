@@ -1,6 +1,6 @@
-"""澄岭精密的固定演练台账和证书历史。"""
+"""澄岭精密的固定演练台账、证书历史与历史检查记录。"""
 
-from .spec import ACTIVE, CERTIFICATE, DEMO_DAY, INACTIVE, INSTRUMENT
+from .spec import ACTIVE, CERTIFICATE, DEMO_DAY, FAIL, INACTIVE, INSPECTION, INSTRUMENT, PASS
 
 
 def demo_rows() -> list[dict]:
@@ -24,12 +24,36 @@ def demo_rows() -> list[dict]:
         ('QC-106', 'CL-106-26', '2026-11-22', '2027-05-22'),
         ('QC-107', 'CL-107-25', '2025-11-05', '2026-05-05'),
     ]
-    return [
+    # (器具, 检查班次, 结果, 录入日期)。录入日期晚于班次即晚到记录，只补实绩。
+    inspections = [
+        ('QC-101', '2026-10-30', PASS, '2026-10-30'),
+        ('QC-101', '2026-11-10', PASS, '2026-11-10'),
+        ('QC-101', '2026-11-18', FAIL, '2026-11-20'),
+        ('QC-102', '2026-11-05', PASS, '2026-11-05'),
+        ('QC-102', '2026-11-20', FAIL, '2026-11-22'),
+        ('QC-103', '2026-09-20', PASS, '2026-09-20'),
+        ('QC-103', '2026-11-19', FAIL, '2026-11-21'),
+        ('QC-104', '2026-11-01', PASS, '2026-11-01'),
+        ('QC-106', '2026-11-15', PASS, '2026-11-15'),
+        ('QC-106', '2026-11-16', FAIL, '2026-11-19'),
+    ]
+
+    rows = [
         dict(record_type=INSTRUMENT, asset_id=asset_id, asset_name=name, work_area=area,
-             owner=owner, asset_status=status, certificate_id=None, issued_on=None, expires_on=None)
+             owner=owner, asset_status=status, certificate_id=None, issued_on=None, expires_on=None,
+             shift=None, inspection_result=None, recorded_on=None)
         for asset_id, name, area, owner, status in instruments
-    ] + [
+    ]
+    rows += [
         dict(record_type=CERTIFICATE, asset_id=asset_id, asset_name=None, work_area=None,
-             owner=None, asset_status=None, certificate_id=code, issued_on=issued, expires_on=expires)
+             owner=None, asset_status=None, certificate_id=code, issued_on=issued, expires_on=expires,
+             shift=None, inspection_result=None, recorded_on=None)
         for asset_id, code, issued, expires in certificates
     ]
+    rows += [
+        dict(record_type=INSPECTION, asset_id=asset_id, asset_name=None, work_area=None,
+             owner=None, asset_status=None, certificate_id=None, issued_on=None, expires_on=None,
+             shift=shift, inspection_result=result, recorded_on=recorded)
+        for asset_id, shift, result, recorded in inspections
+    ]
+    return rows

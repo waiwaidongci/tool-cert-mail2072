@@ -18,6 +18,7 @@
 | 到期清单 | 查看业务指标、证据表和解释，通过来源链接回查数据。 |
 | 班报复核 | 查看待处理或已完成记录。复核主管可提交班报处置及依据。 |
 | 班报收件箱 | 查看计算报告、计划状态及站内投递和拦截回执，或下载 CSV。 |
+| 历史比较 | 逐班还原当时的证书，比较两套送校提前量的漏警台数之差上下界；晚到检查只补实绩。 |
 
 ## 启动
 
@@ -44,7 +45,9 @@ docker compose exec -T backend python -m scripts.seed_demo
 4. 装配扭矩扳手 QC-102 当日到期，线长在交班前安排换具和送校。
 5. 计量员联系终检核对 QC-106 的证书，11 月 22 日签发的记录留待下一报告日采纳。
 6. 主管确认 5/6 台有证书记录，配置站内定时分发。
-7. 将覆盖门槛提高到 100% 试跑，班报保留逐台处置清单，定时分发暂停。
+7. 在「历史比较」页发起比较，设置方案 A、方案 B 的送校提前量。逐班还原当时证书后，漏警台数之差给出上下界，未查出超差的器具单列。
+8. 补录晚到检查后点「补录后重算」：只重算受影响器具，两套方案一起发布新版本。
+9. 将覆盖门槛提高到 100% 试跑，班报保留逐台处置清单，定时分发暂停。
 
 ## 计算口径
 
@@ -52,6 +55,11 @@ docker compose exec -T backend python -m scripts.seed_demo
 - 到期剩余天数 = 到期日减报告日。负值为已过期，0 为当日到期，其余在提醒天数内（含上限）为即将到期。
 - 覆盖率 = 截至报告日有证书的在用器具数 ÷ 在用器具总数，已过期的证书也计入覆盖率。
 - 至少有一台在用器具且实际覆盖率达到门槛时允许定时分发。每日计划推进报告日并读取最新导入批次。
+- 历史比较逐班还原：每个班次只承认签发日不晚于该班次的最新证书，后续签发的证书不回填旧班。
+- 检查记录带班次和录入日期。晚到记录（录入日晚于班次）只补实绩，预警只看证书签发日，不改写当班预警。
+- 可能起点取上次合格班次之后到首次超差班次（含）。起点之前没有到期预警即算漏警，两套方案共用同一组起点。
+- 漏警台数之差按台独立累加得到上下界；未查出超差的器具单列，不计入差值。
+- 补录后重算只重算受影响器具及其班次；两套方案在同一事务整批发布。结果带版本号，旧任务不能覆盖新结果。
 
 ## 本地开发
 
@@ -63,5 +71,7 @@ docker compose exec -T backend python -m scripts.seed_demo
 | 数据 | MySQL 8 存储批次、运行与审计。`backend/scripts/seed_demo.py` 可安全重复执行。 |
 
 改动前端后执行 `docker compose up -d --build frontend`。改动接口或算法后执行 `docker compose up -d --build backend worker`，再刷新浏览器。如需保留数据，停止时执行 `docker compose down`。使用 `docker compose down -v --remove-orphans` 会清除该项目的数据库、Redis 和报表卷。
+
+历史比较的计算口径有独立单测，无需数据库：`cd backend && PYTHONPATH=. python -m pytest tests` 或直接 `PYTHONPATH=. python tests/test_comparison.py`。
 
 `.env.example` 中的 `COMPOSE_PROJECT_NAME`、`FRONTEND_PORT`、`BACKEND_PORT`、`DB_PORT`、`APP_SUBNET` 控制项目隔离。`DB_PASSWORD`、`JWT_SECRET` 和 `SEED_DEMO` 为本机演示默认设置。后端 `constants/enums.py` 与前端 `src/constants/enums.js` 保持角色、运行状态和复核状态一致。项目许可证见 `LICENSE`。

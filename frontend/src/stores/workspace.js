@@ -6,8 +6,12 @@ export const workspace = {
   spec: null,
   datasets: [],
   runs: [],
+  comparisons: [],
   async init() { this.spec = await request('/spec'); },
-  async refresh() { [this.datasets, this.runs] = await Promise.all([call('/datasets'), call('/runs')]); },
+  async refresh() {
+    [this.datasets, this.runs, this.comparisons] =
+      await Promise.all([call('/datasets'), call('/runs'), call('/comparisons')]);
+  },
   getDataset: (id, offset = 0) => call(`/datasets/${id}?offset=${offset}`),
   getRun: id => call(`/runs/${id}`),
   upload: data => call('/datasets', data),
@@ -18,5 +22,11 @@ export const workspace = {
   deliveries: () => call('/deliveries'),
   schedule: data => call('/schedules', data),
   disable: id => call(`/schedules/${id}/disable`, {}),
+  comparisons: () => call('/comparisons'),
+  comparison: id => call(`/comparisons/${id}`),
+  comparisonShifts: (id, asset) => call(`/comparisons/${id}/shifts${asset ? `?asset=${encodeURIComponent(asset)}` : ''}`),
+  comparisonJobs: () => call('/comparisons/jobs'),
+  startComparison: data => call('/comparisons', data),
+  backfill: id => call(`/comparisons/${id}/backfill`, {}),
   download: (path, filename) => saveFile(path, session.token, filename),
 };

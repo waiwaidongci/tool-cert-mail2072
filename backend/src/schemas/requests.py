@@ -28,3 +28,9 @@ class ScheduleRequest(RunRequest):
     recipient: str = Field(min_length=1, max_length=100)
     first_at: datetime
     repeat_daily: bool = False
+
+class ComparisonRequest(Request):
+    dataset_id: int = Field(gt=0)
+    dataset_name: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=120)
+    params: dict = Field(default_factory=dict)

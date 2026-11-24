@@ -8,6 +8,40 @@ import {workspace} from '../stores/workspace.js';
 import {button, el, h, link, p} from '../utils/dom.js';
 import {date, value} from '../utils/format.js';
 
+const EVIDENCE_TITLE = '逐班还原的证据（当时证书、预警与检查依据）';
+
+function evidenceTable(rows) {
+  return table([
+    {key:'asset_id',label:'器具编号'}, {key:'shift',label:'班次'},
+    {key:'certificate_id',label:'当班证书'}, {key:'expires_on',label:'到期日'},
+    {key:'days_remaining',label:'剩余天数'},
+    {label:'方案 A',render:row => row.scheme_a === '预警' ? '预警' : '—'},
+    {label:'方案 B',render:row => row.scheme_b === '预警' ? '预警' : '—'},
+    {key:'inspection_result',label:'检查结果'}, {key:'recorded_on',label:'录入日期'},
+    {label:'是否晚到',render:row => row.late === '晚到' ? '晚到' : '—'},
+  ], rows, {caption:'预警与检查依据', empty:'没有可查的依据。'});
+}
+
+function evidenceLookup(result) {
+  const source = (result.tables || []).find(item => item.title === EVIDENCE_TITLE);
+  if (!source || !source.rows.length) return null;
+  const shifts = source.rows;
+  const byAsset = new Map();
+  for (const row of shifts) {
+    if (!byAsset.has(row.asset_id)) byAsset.set(row.asset_id, []);
+    byAsset.get(row.asset_id).push(row);
+  }
+  const picker = el('select',{id:'evidence-asset','aria-label':'按器具查看证据'},
+    el('option',{value:''},'全部器具'),
+    [...byAsset.keys()].map(asset => el('option',{value:asset},asset)));
+  const body = el('div',{id:'evidence-body'}, evidenceTable(shifts));
+  picker.addEventListener('change', () =>
+    body.replaceChildren(evidenceTable(picker.value ? byAsset.get(picker.value) || [] : shifts)));
+  return panel('预警与检查依据',
+    p('逐班还原当时的证书；晚到记录只补实绩，不改当班预警。可以按器具回查依据。','subtle'),
+    el('label',{class:'field run-picker',for:'evidence-asset'},el('span',{},'按器具查看'),picker), body);
+}
+
 export async function results(route, refresh) {
   const {spec,runs,datasets} = workspace;
   const id = route.id || runs[0]?.id;
@@ -37,7 +71,8 @@ export async function results(route, refresh) {
     metrics(result.metrics),
     result.charts.map(plot),
     (result.sections || []).map(item=>panel(item.title,p(item.text))),
-    result.tables.map(item=>panel(item.title,table(item.columns,item.rows,{caption:item.title}))))
+    result.tables.map(item=>panel(item.title,table(item.columns,item.rows,{caption:item.title}))),
+    evidenceLookup(result))
     : panel(job.name,pill(STATUS[job.status],job.status),p(job.error,'feedback'),link('返回调整参数',`#run/${job.dataset_id}`,{class:'quiet'}));
   const inputs = spec.params.map(param=>el('div',{},el('dt',{},param.label),el('dd',{},value(job.params[param.key]))));
   return el('div',{},el('div',{class:'two-col'},el('div',{class:'wide-panel'},analysis),
